@@ -25,13 +25,15 @@ class VotronicProtocol(asyncio.Protocol):
     queue = b''
     # skeleton for our parsed datagram
     parsed_datagram = {
-        'id': None,
+        'model': None,
         'V_bat': None,
         'V_solar': None,
         'I_charge': None,
-        'mode': None,
         'temp': None,
-        'flags': None,
+        'charge_mode': None,
+        'charge_full': None,
+        'charge_over80': None,
+        'flags': [],
         'checksum': None
     }
 
