@@ -48,6 +48,7 @@ class VotronicProtocol(asyncio.Protocol):
         while True:
             preamble = self.queue.find(b"\xAA")
             if preamble < 0:
+                # wait for more data
                 break
 
             # got complete datagram?
