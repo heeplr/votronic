@@ -7,6 +7,7 @@ import asyncio
 import json
 import struct
 import click
+import serial
 import serial_asyncio
 
 
@@ -15,6 +16,11 @@ DATAGRAM_SIZE = 16
 
 class VotronicProtocol(asyncio.Protocol):
     """read from serial, extract datagram, parse, output as JSON"""
+
+    # choose datagram parser by model id
+    MODELS = {
+        0xAA: VotronicProtocol.parse_MPxxx
+    }
 
     # True if we shouldn't parse but just dump datagrams for debugging
     DUMP = False
@@ -58,10 +64,20 @@ class VotronicProtocol(asyncio.Protocol):
                 # dump only?
                 if self.DUMP:
                     print(datagram.hex())
+
+                # parse datagram
                 else:
+                    # select parser from model ID (2nd byte of datagram)
+                    model = datagram[1]
+                    try:
+                        parser = self.MODELS[model]
+                    except KeyError:
+                        # no parser found, try default
+                        parser = self.MODELS[0xAA]
+
                     # output parsed datagram (if valid)
-                    # if result := self.parse_datagram(datagram):
-                    result = self.parse_datagram(datagram)
+                    # if result := parser(datagram):
+                    result = parser(datagram)
                     if result:
                         # remove excluded keys from result
                         result = {
@@ -80,7 +96,7 @@ class VotronicProtocol(asyncio.Protocol):
     def connection_lost(self, exc):
         self.transport.loop.stop()
 
-    def parse_datagram(self, datagram):
+    def parse_MPxxx(self, datagram):
         """parse single datagram to json serializable dict"""
 
         charge_modes = {
@@ -105,8 +121,8 @@ class VotronicProtocol(asyncio.Protocol):
             flags3,
             temperature,
             charge_mode,
-            flags4,
-            flags5,
+            bat_status,
+            controller_status,
             checksum,
         ) = struct.unpack_from(
             # use little endian mode
@@ -125,28 +141,31 @@ class VotronicProtocol(asyncio.Protocol):
             "b"
             # charge mode/battery type (char)
             "B"
-            # flags (2x char)
-            "2b"
+            # battery status flags (char)
+            "b"
+            # controller status flags (char)
+            "b"
             # checksum
             "c",
             buffer=datagram,
-            # skip first byte, is preamble
+            # skip first byte (preamble)
             offset=1,
         )
 
         # extract unused bit from charge_mode, in case it's used
         flag = charge_mode & 0b10000000
-
-        # maybe battery full ?
-        charge_full = bool(flags4 & 0b1)
-        # erase bit from flags
-        flags4 &= 0b11111110
-        # maybe >80% ?
-        charge_over80percent = bool(flags5 & 0b10000)
-        # erase bit from flags
-        flags5 &= 0b01111
         # mask upper bit from charge_mode (just to be sure)
         charge_mode &= 0b01111111
+
+        # maybe battery full ?
+        charge_full = bool(bat_status & 0b1)
+        # erase bit from flags
+        bat_status &= 0b11111110
+        # maybe >80% ?
+        charge_over80percent = bool(controller_status & 0b10000)
+        # erase bit from flags
+        controller_status &= 0b01111
+
         # look up charge mode
         try:
             charge_mode = charge_modes[int(charge_mode)]
@@ -154,7 +173,7 @@ class VotronicProtocol(asyncio.Protocol):
             charge_mode = f"unknown: {charge_mode}"
 
         self.parsed_datagram = {
-            "model": model.hex(),
+            "model": hex(model),
             "V_bat": bat_voltage / 100,
             "V_solar": solar_current / 100,
             "I_charge": charge_current / 100,
@@ -166,8 +185,8 @@ class VotronicProtocol(asyncio.Protocol):
                 hex(flags1),
                 hex(flags2),
                 hex(flags3),
-                hex(flags4),
-                hex(flags5),
+                hex(bat_status),
+                hex(controller_status),
                 hex(flag),
             ],
             "checksum": checksum.hex(),
