@@ -45,7 +45,6 @@ class VotronicProtocol(asyncio.Protocol):
 
         # get position of preamble for all preambles
         # while preamble := self.datagrams.find(b'\xAA') > 0:
-        preamble = 0
         while True:
             preamble = self.queue.find(b"\xAA")
             if preamble < 0:
