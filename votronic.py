@@ -80,12 +80,6 @@ class VotronicProtocol(asyncio.Protocol):
     def connection_lost(self, exc):
         self.transport.loop.stop()
 
-    def pause_writing(self):
-        print(self.transport.get_write_buffer_size())
-
-    def resume_writing(self):
-        print(self.transport.get_write_buffer_size())
-
     def parse_datagram(self, datagram):
         """parse single datagram to json serializable dict"""
 
