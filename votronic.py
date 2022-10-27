@@ -22,7 +22,7 @@ class VotronicProtocol(asyncio.Protocol):
     EXCLUDE = []
     # queue for incoming raw serial data
     queue = b""
-    # skeleton for our parsed datagram
+    # skeleton for our parsed datagram (@todo this should be a dataclass)
     parsed_datagram = {
         "model": None,
         "V_bat": None,
