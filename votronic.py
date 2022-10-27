@@ -94,7 +94,7 @@ class VotronicProtocol(asyncio.Protocol):
             0x58: "lifepo4_14.8V",
         }
 
-        # unpack datagram (skip first byte, is preamble)
+        # unpack datagram
         (
             model,
             bat_voltage,
@@ -130,6 +130,7 @@ class VotronicProtocol(asyncio.Protocol):
             # checksum
             "c",
             buffer=datagram,
+            # skip first byte, is preamble
             offset=1,
         )
 
