@@ -57,3 +57,11 @@ Options:
                                   VOTRONIC_EXCLUDE]
   -h, --help                      Show this message and exit.
 ```
+
+## Throttled log to JSON file
+
+Only log every 50th datagram to file:
+
+```
+$ votronic | gawk 'NR==1 || NR%50 == 0 { print; fflush(); }' >> votronic-solar.json
+```
