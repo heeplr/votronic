@@ -5,9 +5,11 @@
 import click
 import json
 import asyncio
+import dataclasses
 import serial_asyncio
 
-from votronic import VotronicProtocol
+from votronic import VotronicDatagram, VotronicProtocol
+
 
 
 # ----------------------------------------------------------------------
@@ -44,7 +46,10 @@ from votronic import VotronicProtocol
 @click.option(
     "--exclude",
     "-e",
-    type=click.Choice(VotronicProtocol.parsed_datagram.keys(), case_sensitive=False),
+    type=click.Choice(
+        [ field.name for field in dataclasses.fields(VotronicDatagram) ],
+        case_sensitive=False
+    ),
     default=[],
     multiple=True,
     show_default=True,
@@ -54,9 +59,21 @@ from votronic import VotronicProtocol
 def read_votronic(port, baudrate, dump, exclude):
     """read displayport of Votronic MP430 Duo Digital Solar Regulator and output as json"""
 
+    def output_datagram(self, datagram):
+        """print datagram as json"""
+        # remove excluded keys from result
+        result = {
+            k: v for k, v in dataclasses.asdict(datagram).items() if k not in exclude
+        }
+        # output
+        click.echo(json.dumps(result))
+
+    def dump_datagram(self, datagram):
+        """just dump raw hex"""
+        click.echo(datagram.datagram)
+
     # set protocol options
-    VotronicProtocol.DUMP = dump
-    VotronicProtocol.EXCLUDE = exclude
+    VotronicProtocol.CALLBACK = dump_datagram if dump else output_datagram
 
     # setup asyncio loop
     loop = asyncio.get_event_loop()

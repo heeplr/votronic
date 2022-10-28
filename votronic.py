@@ -2,32 +2,36 @@
 
 
 import asyncio
+from dataclasses import asdict, dataclass
 import struct
 import serial_asyncio
 
 
+@dataclass
+class VotronicDatagram:
+    model_id: int
+    V_bat: float
+    V_solar: float
+    I_charge: float
+    temp: int
+    bat_status: list
+    ctrl_status: list
+    charge_mode: str
+    datagram: str
+
+
 class VotronicProtocol(asyncio.Protocol):
-    """read from serial, extract datagram, parse, output as JSON"""
+    """read from serial, extract datagram, parse, pass dataclass"""
     # size of one datagram in bytes
     DATAGRAM_SIZE = 16
     # True if we shouldn't parse but just dump datagrams for debugging
     DUMP = False
     # exclude those fields in parsed datagram output
     EXCLUDE = []
+    # callback for received datagrams
+    CALLBACK = None
     # queue for incoming raw serial data
     queue = b""
-    # skeleton for our parsed datagram (@todo this should be a dataclass)
-    parsed_datagram = {
-        "model_id": None,
-        "V_bat": None,
-        "V_solar": None,
-        "I_charge": None,
-        "temp": None,
-        "bat_status": None,
-        "ctrl_status": None,
-        "charge_mode": None,
-        "datagram": None,
-    }
 
     def connection_made(self, transport):
         """called after serial port initialization"""
@@ -50,35 +54,23 @@ class VotronicProtocol(asyncio.Protocol):
             if len(self.queue) >= self.DATAGRAM_SIZE + preamble:
                 # separate our datagram from datagram stream
                 datagram = self.queue[preamble : self.DATAGRAM_SIZE + preamble]
-                # dump only?
-                if self.DUMP:
-                    print(datagram.hex())
 
-                # parse datagram
-                else:
-                    # choose datagram parser by model id
-                    MODELS = {
-                        0xAA: self.parse_mpxxx
-                    }
+                # choose datagram parser by model id
+                MODELS = {
+                    0xAA: self.parse_mpxxx
+                }
 
-                    # select parser from model ID (2nd byte of datagram)
-                    model = datagram[1]
-                    try:
-                        parser = MODELS[model]
-                    except KeyError:
-                        # no parser found, try default
-                        parser = MODELS[0xAA]
+                # select parser from model ID (2nd byte of datagram)
+                model = datagram[1]
+                try:
+                    parser = MODELS[model]
+                except KeyError:
+                    # no parser found, try default
+                    parser = MODELS[0xAA]
 
-                    # output parsed datagram (if valid)
-                    # if result := parser(datagram):
-                    result = parser(datagram)
-                    if result:
-                        # remove excluded keys from result
-                        result = {
-                            k: v for k, v in result.items() if k not in self.EXCLUDE
-                        }
-                        # output
-                        print(json.dumps(result))
+                # output parsed datagram (if valid)
+                if parsed_datagram := parser(datagram):
+                    self.CALLBACK(parsed_datagram)
 
                 # remove datagram from queue and seek to start of next datagram
                 self.queue = self.queue[self.DATAGRAM_SIZE + preamble :]
@@ -181,7 +173,7 @@ class VotronicProtocol(asyncio.Protocol):
         ]
 
         # decoded datagram dict
-        self.parsed_datagram = {
+        result = VotronicDatagram(**{
             "model_id": hex(model),
             "V_bat": bat_voltage / 100,
             "V_solar": solar_current / 100,
@@ -191,8 +183,8 @@ class VotronicProtocol(asyncio.Protocol):
             "ctrl_status": controller_status,
             "charge_mode": charge_mode,
             "datagram": datagram.hex(),
-        }
-        return self.parsed_datagram
+        })
+        return result
 
     def crc(self, datagram):
         """True if valid CRC, False otherwise"""
