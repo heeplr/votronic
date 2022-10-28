@@ -6,12 +6,10 @@ import struct
 import serial_asyncio
 
 
-DATAGRAM_SIZE = 16
-
-
 class VotronicProtocol(asyncio.Protocol):
     """read from serial, extract datagram, parse, output as JSON"""
-
+    # size of one datagram in bytes
+    DATAGRAM_SIZE = 16
     # True if we shouldn't parse but just dump datagrams for debugging
     DUMP = False
     # exclude those fields in parsed datagram output
@@ -49,9 +47,9 @@ class VotronicProtocol(asyncio.Protocol):
                 break
 
             # got complete datagram?
-            if len(self.queue) >= DATAGRAM_SIZE + preamble:
+            if len(self.queue) >= self.DATAGRAM_SIZE + preamble:
                 # separate our datagram from datagram stream
-                datagram = self.queue[preamble : DATAGRAM_SIZE + preamble]
+                datagram = self.queue[preamble : self.DATAGRAM_SIZE + preamble]
                 # dump only?
                 if self.DUMP:
                     print(datagram.hex())
@@ -83,7 +81,7 @@ class VotronicProtocol(asyncio.Protocol):
                         print(json.dumps(result))
 
                 # remove datagram from queue and seek to start of next datagram
-                self.queue = self.queue[DATAGRAM_SIZE + preamble :]
+                self.queue = self.queue[self.DATAGRAM_SIZE + preamble :]
 
             # not enough data received, yet
             else:
