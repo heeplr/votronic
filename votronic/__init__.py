@@ -21,7 +21,7 @@ class VotronicDatagram:
     # V_bat * I_charge
     P_charge: float
     # ?
-    temp: int = None
+    ctrl_temp: int = None
     # bitfield
     bat_status: str = None
     # bitfield
@@ -118,7 +118,7 @@ class VotronicProtocol(asyncio.Protocol):
             flags1,
             flags2,
             flags3,
-            temperature,
+            controller_temp,
             charge_mode,
             bat_status,
             controller_status,
@@ -198,7 +198,7 @@ class VotronicProtocol(asyncio.Protocol):
         self.datagram.V_bat = bat_voltage / 100
         self.datagram.V_solar = solar_voltage / 100
         self.datagram.I_charge = charge_current / 10
-        self.datagram.temp = temperature
+        self.datagram.ctrl_temp = controller_temp
         self.datagram.bat_status = bat_status
         self.datagram.ctrl_status = controller_status
         self.datagram.charge_mode = charge_mode
