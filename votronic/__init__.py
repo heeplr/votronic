@@ -18,6 +18,8 @@ class VotronicDatagram:
     V_solar: float = None
     # Ampere
     I_charge: float = None
+    # V_bat * I_charge
+    P_charge: float
     # ?
     temp: int = None
     # bitfield
@@ -32,6 +34,9 @@ class VotronicDatagram:
     def P_charge(self):
         return self.I_charge * self.V_bat
 
+    @P_charge.setter
+    def P_charge(self, value):
+        return
 
 class VotronicProtocol(asyncio.Protocol):
     """read from serial, extract datagram, parse, pass dataclass"""
