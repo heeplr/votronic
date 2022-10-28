@@ -10,16 +10,16 @@ import serial_asyncio
 
 @dataclass
 class VotronicDatagram:
-    model_id: int
-    V_bat: float
-    V_solar: float
-    I_charge: float
-    temp: int
-    bat_status: list
-    ctrl_status: list
-    charge_mode: str
-    datagram: str
-    timestamp: str
+    model_id: int = None
+    V_bat: float = None
+    V_solar: float = None
+    I_charge: float = None
+    temp: int = None
+    bat_status: list = None
+    ctrl_status: list = None
+    charge_mode: str = None
+    datagram: str = None
+    timestamp: str = None
 
 class VotronicProtocol(asyncio.Protocol):
     """read from serial, extract datagram, parse, pass dataclass"""
@@ -33,6 +33,11 @@ class VotronicProtocol(asyncio.Protocol):
     CALLBACK = None
     # queue for incoming raw serial data
     queue = b""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # initialize datagram object
+        self.datagram = VotronicDatagram()
 
     def connection_made(self, transport):
         """called after serial port initialization"""
@@ -173,20 +178,19 @@ class VotronicProtocol(asyncio.Protocol):
             if bit & controller_status
         ]
 
-        # decoded datagram dict
-        result = VotronicDatagram(
-            model_id = hex(model),
-            V_bat = bat_voltage / 100,
-            V_solar = solar_current / 100,
-            I_charge = charge_current / 100,
-            temp = temperature,
-            bat_status = bat_status,
-            ctrl_status = controller_status,
-            charge_mode = charge_mode,
-            datagram = datagram.hex(),
-            timestamp = str(datetime.datetime.now())
-        )
-        return result
+        # decoded datagram
+        self.datagram.model_id = hex(model)
+        self.datagram.V_bat = bat_voltage / 100
+        self.datagram.V_solar = solar_current / 100
+        self.datagram.I_charge = charge_current / 100
+        self.datagram.temp = temperature
+        self.datagram.bat_status = bat_status
+        self.datagram.ctrl_status = controller_status
+        self.datagram.charge_mode = charge_mode
+        self.datagram.datagram = datagram.hex()
+        self.datagram.timestamp = str(datetime.datetime.now())
+
+        return self.datagram
 
     def crc(self, datagram):
         """True if valid CRC, False otherwise"""
