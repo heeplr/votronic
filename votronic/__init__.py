@@ -3,6 +3,7 @@
 
 import asyncio
 from dataclasses import asdict, dataclass
+import datetime
 import struct
 import serial_asyncio
 
@@ -18,7 +19,7 @@ class VotronicDatagram:
     ctrl_status: list
     charge_mode: str
     datagram: str
-
+    timestamp: str
 
 class VotronicProtocol(asyncio.Protocol):
     """read from serial, extract datagram, parse, pass dataclass"""
@@ -173,17 +174,18 @@ class VotronicProtocol(asyncio.Protocol):
         ]
 
         # decoded datagram dict
-        result = VotronicDatagram(**{
-            "model_id": hex(model),
-            "V_bat": bat_voltage / 100,
-            "V_solar": solar_current / 100,
-            "I_charge": charge_current / 100,
-            "temp": temperature,
-            "bat_status": bat_status,
-            "ctrl_status": controller_status,
-            "charge_mode": charge_mode,
-            "datagram": datagram.hex(),
-        })
+        result = VotronicDatagram(
+            model_id = hex(model),
+            V_bat = bat_voltage / 100,
+            V_solar = solar_current / 100,
+            I_charge = charge_current / 100,
+            temp = temperature,
+            bat_status = bat_status,
+            ctrl_status = controller_status,
+            charge_mode = charge_mode,
+            datagram = datagram.hex(),
+            timestamp = str(datetime.datetime.now())
+        )
         return result
 
     def crc(self, datagram):
