@@ -23,7 +23,7 @@ class VotronicDatagram:
     # ?
     temp: int = None
     # bitfield
-    bat_status: list = None
+    bat_status: str = None
     # bitfield
     ctrl_status: list = None
     charge_mode: str = None
@@ -174,9 +174,7 @@ class VotronicProtocol(asyncio.Protocol):
             2: "u2_phase",
             3: "u3_phase",
         }
-        bat_status = [
-            status for bit, status in bat_status_bits.items() if bit & bat_status
-        ]
+        bat_status = bat_status_bits[int(bat_status & 0b00001111)]
 
         # read controller status bits
         controller_status_bits = {
