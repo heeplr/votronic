@@ -115,7 +115,7 @@ class VotronicProtocol(asyncio.Protocol):
             "h"
             # solar input voltage * 100 (signed short)
             "h"
-            # charge current * 100 (signed short)
+            # charge current * 10 (signed short)
             "h"
             # flags (3x char)
             "3b"
@@ -182,7 +182,7 @@ class VotronicProtocol(asyncio.Protocol):
         self.datagram.model_id = hex(model)
         self.datagram.V_bat = bat_voltage / 100
         self.datagram.V_solar = solar_current / 100
-        self.datagram.I_charge = charge_current / 100
+        self.datagram.I_charge = charge_current / 10
         self.datagram.temp = temperature
         self.datagram.bat_status = bat_status
         self.datagram.ctrl_status = controller_status
