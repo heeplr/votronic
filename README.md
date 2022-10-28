@@ -1,8 +1,24 @@
 
 read displayport of Votronic MP430 Duo Digital Solar Regulator and output as json
 
+# Pinout
+```
+ .------------------.
+ |                  |    Front view
+ |                  |    into 6P6C socket
+ |                  |
+ | .  .  .  .  .  . |
+ '-+--+--+--+--+--+-'
+   1  2  3  4  5  6
+   |  |     |
+   |  |     |
+   |  |     +- GND
+   |  +------- 5V+ Vcc
+   +---------- DAT (to RX pin on pi)
 
-# Raspberry Pi:
+```
+# Raspberry Pi
+* use level shifter (5V -> 3.3V)
 * add ```enable_uart=1``` to /boot/config.txt
 * ensure serial console is disabled
   * use ```console=tty``` in /boot/cmdline.txt not ```console=/dev/ttyAMA0``` etc.
