@@ -177,7 +177,7 @@ class VotronicProtocol(asyncio.Protocol):
         try:
             bat_status = bat_status_bits[int(bat_status & 0b00001111)]
         except KeyError:
-            bat_status = f"unknown: {bat_status}"s
+            bat_status = f"unknown: {bat_status}"
 
         # read controller status bits
         controller_status_bits = {
