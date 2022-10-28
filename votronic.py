@@ -7,7 +7,6 @@ import asyncio
 import json
 import struct
 import click
-import serial
 import serial_asyncio
 
 
@@ -17,11 +16,6 @@ DATAGRAM_SIZE = 16
 class VotronicProtocol(asyncio.Protocol):
     """read from serial, extract datagram, parse, output as JSON"""
 
-    # choose datagram parser by model id
-    MODELS = {
-        0xAA: VotronicProtocol.parse_MPxxx
-    }
-
     # True if we shouldn't parse but just dump datagrams for debugging
     DUMP = False
     # exclude those fields in parsed datagram output
@@ -30,22 +24,23 @@ class VotronicProtocol(asyncio.Protocol):
     queue = b""
     # skeleton for our parsed datagram (@todo this should be a dataclass)
     parsed_datagram = {
-        "model": None,
+        "model_id": None,
         "V_bat": None,
         "V_solar": None,
         "I_charge": None,
         "temp": None,
+        "bat_status": None,
+        "ctrl_status": None,
         "charge_mode": None,
-        "charge_full": None,
-        "charge_over80": None,
-        "flags": [],
-        "checksum": None,
+        "datagram": None,
     }
 
     def connection_made(self, transport):
+        """called after serial port initialization"""
         self.transport = transport
 
     def data_received(self, data):
+        """called when serial data is received"""
         # append to already received datagrams
         self.queue += data
 
@@ -67,13 +62,18 @@ class VotronicProtocol(asyncio.Protocol):
 
                 # parse datagram
                 else:
+                    # choose datagram parser by model id
+                    MODELS = {
+                        0xAA: self.parse_mpxxx
+                    }
+
                     # select parser from model ID (2nd byte of datagram)
                     model = datagram[1]
                     try:
-                        parser = self.MODELS[model]
+                        parser = MODELS[model]
                     except KeyError:
                         # no parser found, try default
-                        parser = self.MODELS[0xAA]
+                        parser = MODELS[0xAA]
 
                     # output parsed datagram (if valid)
                     # if result := parser(datagram):
@@ -94,21 +94,11 @@ class VotronicProtocol(asyncio.Protocol):
                 break
 
     def connection_lost(self, exc):
+        """called after port close"""
         self.transport.loop.stop()
 
-    def parse_MPxxx(self, datagram):
+    def parse_mpxxx(self, datagram):
         """parse single datagram to json serializable dict"""
-
-        charge_modes = {
-            0x35: "lead_gel",
-            0x22: "lead_agm1",
-            0x2F: "lead_agm2",
-            0x50: "lifepo4_13.9V",
-            0x52: "lifepo4_14.2V",
-            0x54: "lifepo4_14.4V",
-            0x56: "lifepo4_14.6V",
-            0x58: "lifepo4_14.8V",
-        }
 
         # unpack datagram
         (
@@ -128,7 +118,7 @@ class VotronicProtocol(asyncio.Protocol):
             # use little endian mode
             "<"
             # model ID (char)
-            "c"
+            "b"
             # battery voltage * 100 (signed short)
             "h"
             # solar input voltage * 100 (signed short)
@@ -152,44 +142,61 @@ class VotronicProtocol(asyncio.Protocol):
             offset=1,
         )
 
-        # extract unused bit from charge_mode, in case it's used
-        flag = charge_mode & 0b10000000
-        # mask upper bit from charge_mode (just to be sure)
-        charge_mode &= 0b01111111
-
-        # maybe battery full ?
-        charge_full = bool(bat_status & 0b1)
-        # erase bit from flags
-        bat_status &= 0b11111110
-        # maybe >80% ?
-        charge_over80percent = bool(controller_status & 0b10000)
-        # erase bit from flags
-        controller_status &= 0b01111
-
         # look up charge mode
+        charge_modes = {
+            0x35: "lead_gel",
+            0x22: "lead_agm1",
+            0x2F: "lead_agm2",
+            0x50: "lifepo4_13.9V",
+            0x52: "lifepo4_14.2V",
+            0x54: "lifepo4_14.4V",
+            0x56: "lifepo4_14.6V",
+            0x58: "lifepo4_14.8V",
+        }
         try:
-            charge_mode = charge_modes[int(charge_mode)]
+            charge_mode = charge_modes[int(charge_mode & 0b01111111)]
         except KeyError:
             charge_mode = f"unknown: {charge_mode}"
 
+        # read battery status bits
+        bat_status_bits = {
+            0b00000001: "i_phase",
+            0b00000010: "u1_phase",
+            0b00000100: "u2_phase",
+            0b00001000: "u3_phase",
+        }
+        bat_status = [
+            status for bit, status in bat_status_bits.items() if bit & bat_status
+        ]
+
+        # read controller status bits
+        controller_status_bits = {
+            0b10000000: "unknown8",
+            0b01000000: "unknown7",
+            0b00100000: "unknown6",
+            0b00010000: "charged_over80percent",
+            0b00001000: "unknown4",
+            0b00000100: "unknown3",
+            0b00000010: "unknown2",
+            0b00000001: "unknown1"
+        }
+        controller_status = [
+            status
+            for bit, status in controller_status_bits.items()
+            if bit & controller_status
+        ]
+
+        # decoded datagram dict
         self.parsed_datagram = {
-            "model": hex(model),
+            "model_id": hex(model),
             "V_bat": bat_voltage / 100,
             "V_solar": solar_current / 100,
             "I_charge": charge_current / 100,
             "temp": temperature,
+            "bat_status": bat_status,
+            "ctrl_status": controller_status,
             "charge_mode": charge_mode,
-            "charge_full": charge_full,
-            "charge_over80": charge_over80percent,
-            "flags": [
-                hex(flags1),
-                hex(flags2),
-                hex(flags3),
-                hex(bat_status),
-                hex(controller_status),
-                hex(flag),
-            ],
-            "checksum": checksum.hex(),
+            "datagram": datagram.hex(),
         }
         return self.parsed_datagram
 
@@ -211,7 +218,7 @@ class VotronicProtocol(asyncio.Protocol):
 @click.option(
     "--port",
     "-p",
-    default="/dev/ttyS0",
+    default="/dev/ttyAMA0",
     show_default=True,
     show_envvar=True,
     help="serial port",
@@ -222,7 +229,7 @@ class VotronicProtocol(asyncio.Protocol):
     default=1020,
     show_default=True,
     show_envvar=True,
-    help="baudrate",
+    help="serial baudrate",
 )
 @click.option(
     "--dump/--parse",
@@ -240,7 +247,7 @@ class VotronicProtocol(asyncio.Protocol):
     multiple=True,
     show_default=True,
     show_envvar=True,
-    help="exclude those fields in output",
+    help="exclude those fields in output (repeat for multiple fields)",
 )
 def read_votronic(port, baudrate, dump, exclude):
     """read displayport of Votronic MP430 Duo Digital Solar Regulator and output as json"""
