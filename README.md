@@ -14,7 +14,7 @@ read displayport of Votronic MP430 Duo Digital Solar Regulator and output as jso
    |  |     |
    |  |     +- GND
    |  +------- 5V+ Vcc
-   +---------- DAT (to RX pin on pi)
+   +---------- DAT (via level shifter to RX pin on pi)
 
 ```
 # Raspberry Pi
