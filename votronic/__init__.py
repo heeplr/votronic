@@ -169,10 +169,10 @@ class VotronicProtocol(asyncio.Protocol):
 
         # read battery status bits
         bat_status_bits = {
-            0b00000001: "i_phase",
-            0b00000010: "u1_phase",
-            0b00000100: "u2_phase",
-            0b00001000: "u3_phase",
+            0: "i_phase",
+            1: "u1_phase",
+            2: "u2_phase",
+            3: "u3_phase",
         }
         bat_status = [
             status for bit, status in bat_status_bits.items() if bit & bat_status
