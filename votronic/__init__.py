@@ -10,16 +10,28 @@ import serial_asyncio
 
 @dataclass
 class VotronicDatagram:
+    # id byte
     model_id: int = None
+    # Volt
     V_bat: float = None
+    # Volt
     V_solar: float = None
+    # Ampere
     I_charge: float = None
+    # ?
     temp: int = None
+    # bitfield
     bat_status: list = None
+    # bitfield
     ctrl_status: list = None
     charge_mode: str = None
     datagram: str = None
     timestamp: str = None
+
+    @property
+    def P_charge(self):
+        return self.I_charge * self.V_bat
+
 
 class VotronicProtocol(asyncio.Protocol):
     """read from serial, extract datagram, parse, pass dataclass"""
