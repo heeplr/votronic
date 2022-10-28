@@ -65,3 +65,11 @@ Only log every 50th datagram to file:
 ```
 $ votronic | gawk 'NR==1 || NR%50 == 0 { print; fflush(); }' >> votronic-solar.json
 ```
+
+
+# References
+
+* [crathje/VotronicSRDuoDig](https://github.com/crathje/VotronicSRDuoDig) uses ESP32
+* [SirReal's Raspberry on a boat #16](https://youtu.be/tXYK4e92x7Q) uses NodeRed
+* [scy/votonic](https://codeberg.org/scy/votonic) reads RS485 bus from votronic battery charger and inverter
+* [cumulumbus blog](https://cumulumbus.de/smart-camper-auslesen-der-batterie-und-solarinformationen-aus-dem-votronic-bluetooth-connector/) uses votronic bluetooth connector
