@@ -169,10 +169,10 @@ class VotronicProtocol(asyncio.Protocol):
 
         # read battery status bits
         bat_status_bits = {
-            0: "i_phase",
-            1: "u1_phase",
-            2: "u2_phase",
-            3: "u3_phase",
+            0b00000001: "i_phase",
+            0b00000010: "u1_phase",
+            0b00000100: "u2_phase",
+            0b00001000: "u3_phase",
         }
         try:
             bat_status = bat_status_bits[int(bat_status & 0b00001111)]
@@ -183,9 +183,9 @@ class VotronicProtocol(asyncio.Protocol):
         controller_status_bits = {
             0b10000000: "unknown8",
             0b01000000: "unknown7",
-            0b00100000: "unknown6",
+            0b00100000: "aes",
             0b00010000: "charged_over80percent",
-            0b00001000: "unknown4",
+            0b00001000: "standby",
             0b00000100: "unknown3",
             0b00000010: "unknown2",
             0b00000001: "unknown1"
