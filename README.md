@@ -1,6 +1,29 @@
 
 read displayport of Votronic MP430 Duo Digital Solar Regulator and output as json
 
+```sh
+$ votronic | head -n1 | jq
+```
+
+```json
+{
+  "model_id": "0x1a",
+  "V_bat": 13.03,
+  "V_solar": 17.7,
+  "I_charge": 3.4,
+  "P_charge": 44.302,
+  "ctrl_temp": 34,
+  "bat_status": "i_phase",
+  "ctrl_status": [
+    "unknown4",
+    "unknown1"
+  ],
+  "charge_mode": "lead_agm1",
+  "datagram": "aa1a1705ea06220000000022220009cf",
+  "timestamp": "2022-10-29 11:52:52.395131"
+}
+```
+
 # Pinout
 ```
  .------------------.
@@ -28,7 +51,7 @@ read displayport of Votronic MP430 Duo Digital Solar Regulator and output as jso
 
 Use pip to install:
 
-```
+```sh
 $ git clone https://github.com/heeplr/votronic
 $ pip install --user votronic
 ```
@@ -37,8 +60,8 @@ or similar
 
 # Usage
 
-```
-# votronic -h
+```sh
+$ votronic -h
 Usage: votronic [OPTIONS]
 
   read displayport of Votronic MP430 Duo Digital Solar Regulator and output as
@@ -62,7 +85,7 @@ Options:
 
 Only log every 50th datagram to file:
 
-```
+```sh
 $ votronic | gawk 'NR==1 || NR%50 == 0 { print; fflush(); }' >> votronic-solar.json
 ```
 
