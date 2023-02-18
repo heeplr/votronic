@@ -15,8 +15,8 @@ $ votronic | head -n1 | jq
   "ctrl_temp": 34,
   "bat_status": "i_phase",
   "ctrl_status": [
-    "unknown4",
-    "unknown1"
+    "active",
+    "mppt"
   ],
   "charge_mode": "lead_agm1",
   "datagram": "aa1a1705ea06220000000022220009cf",
