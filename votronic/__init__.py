@@ -181,14 +181,14 @@ class VotronicProtocol(asyncio.Protocol):
 
         # read controller status bits
         controller_status_bits = {
-            0b10000000: "unknown8",
-            0b01000000: "unknown7",
-            0b00100000: "aes",
-            0b00010000: "charged_over80percent",
-            0b00001000: "standby",
-            0b00000100: "unknown3",
+            0b00000001: "mppt",
             0b00000010: "unknown2",
-            0b00000001: "unknown1"
+            0b00000100: "unknown3",
+            0b00001000: "active",
+            0b00010000: "charged_over80percent",
+            0b00100000: "aes",
+            0b01000000: "unknown7",
+            0b10000000: "unknown8"
         }
         controller_status = [
             status
